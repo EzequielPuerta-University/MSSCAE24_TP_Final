@@ -1,5 +1,6 @@
-from typing import Callable, List, cast
+from typing import Callable, List, Tuple, cast
 
+import numpy as np
 from simulab.models.abstract.agent import Agent
 from simulab.models.abstract.model import (
     AbstractLatticeModel,
@@ -9,19 +10,19 @@ from simulab.models.abstract.model import (
 from simulab.simulation.core.lattice import Lattice
 
 from src.consumer import Consumer
-from src.producer import Producer, ProfitExpectation
+from src.producer import Producer
 
 
 class Market(AbstractLatticeModel):
     def __init__(  # type: ignore[no-untyped-def]
         self,
-        capital: float = 1000000,
-        stock: int = 5000,
-        price: float = 100,
-        earn: float = 0.1,
-        within_days: int = 10,
-        delta_price: float = 0.015,
-        min_earnings: float = 0.05,
+        capital: float = 1_000_000,
+        stock: int = 5_000_000_000,
+        price: Tuple[float, float] = (100, 10),
+        fixed_cost: Tuple[float, float] = (250_000, 10_000),
+        marginal_cost: Tuple[float, float] = (30.0, 5.0),
+        quantity_to_buy: Tuple[int, int] = (4000, 1500),
+        profit_period: int = 10,
         producer_probability: float = 0.1,
         *args,
         **kwargs,
@@ -29,10 +30,10 @@ class Market(AbstractLatticeModel):
         self.capital = capital
         self.stock = stock
         self.price = price
-        self.earn = earn
-        self.within_days = within_days
-        self.delta_price = delta_price
-        self.min_earnings = min_earnings
+        self.fixed_cost = fixed_cost
+        self.marginal_cost = marginal_cost
+        self.quantity_to_buy = quantity_to_buy
+        self.profit_period = profit_period
         self.producer_probability = producer_probability
 
         length = kwargs.get("length")
@@ -48,28 +49,22 @@ class Market(AbstractLatticeModel):
             *args,
             update_simultaneously=True,
             update_sorted_by_agent_type=True,
-            configuration=configuration,  # type: ignore[misc]
+            configuration=configuration,
             **kwargs,
         )
 
     def _create_agent(self, basic_agent: Agent, i: int, j: int) -> Agent:
         if basic_agent.agent_type == Consumer.TYPE:
             agent = Consumer()
-            self._by_type[Consumer.TYPE].append((i, j))
         elif basic_agent.agent_type == Producer.TYPE:
-            agent = Producer(  # type: ignore[assignment]
+            agent = Producer(
                 capital=self.capital,
                 stock=self.stock,
-                price=self.price,
-                expectation=ProfitExpectation(
-                    initial=self.capital,
-                    earn=self.earn,
-                    within=self.within_days,
-                    delta=self.delta_price,
-                    min_earnings=self.min_earnings,
-                ),
+                price=np.random.normal(*self.price),
+                fixed_cost=np.random.normal(*self.fixed_cost),
+                marginal_cost=np.random.normal(*self.marginal_cost),
+                profit_period=self.profit_period,
             )
-            self._by_type[Producer.TYPE].append((i, j))
         else:
             raise ValueError(
                 f"Invalid agent type. Values {Consumer.TYPE} or {Producer.TYPE} expected"
@@ -99,7 +94,10 @@ class Market(AbstractLatticeModel):
         agent = configuration.at(i, j)
         _type = agent.agent_type
         if _type == Consumer.TYPE:
-            agent.buy(sellers=self.__sellers_for(i, j, configuration))
+            agent.buy(
+                amount=np.random.normal(*self.quantity_to_buy),
+                sellers=self.__sellers_for(i, j, configuration),
+            )
         elif _type == Producer.TYPE:
             agent.balance_check()
         else:
@@ -112,7 +110,7 @@ class Market(AbstractLatticeModel):
 
     @as_series
     def price_lattice(self) -> List[List[float]]:
-        action = lambda i, j: int(self.get_agent(i, j).price)  # type: ignore[attr-defined]
+        action = lambda i, j: int(self.get_agent(i, j).price)
         return self._process_lattice_with(action)
 
     @as_series_with(depends=("price_lattice",))
@@ -124,7 +122,7 @@ class Market(AbstractLatticeModel):
         def _collector(i: int, j: int) -> float | None:
             agent = self.get_agent(i, j)
             if agent.agent_type == agent_type:
-                return agent.price  # type: ignore[attr-defined]
+                return agent.price
             else:
                 return None
 
@@ -136,8 +134,8 @@ class Market(AbstractLatticeModel):
             self.__collect(Consumer.TYPE),
             flatten=True,
         )
-        prices = filter(lambda price: price is not None, prices)  # type: ignore[assignment]
-        return sum(prices) / len(self._by_type[Consumer.TYPE])  # type: ignore[arg-type]
+        prices = list(filter(lambda price: price is not None, prices))
+        return sum(prices) / len(prices)
 
     @as_series
     def average_producer_price(self) -> float:
@@ -145,5 +143,5 @@ class Market(AbstractLatticeModel):
             self.__collect(Producer.TYPE),
             flatten=True,
         )
-        prices = filter(lambda price: price is not None, prices)  # type: ignore[assignment]
-        return sum(prices) / len(self._by_type[Producer.TYPE])  # type: ignore[arg-type]
+        prices = list(filter(lambda price: price is not None, prices))
+        return sum(prices) / len(prices)

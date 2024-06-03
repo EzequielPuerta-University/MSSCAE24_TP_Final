@@ -3,24 +3,25 @@ from typing import Callable
 import pytest
 
 from src.consumer import Consumer
-from src.producer import Producer, ProfitExpectation
+from src.producer import Producer
 
 
 @pytest.fixture
 def producer() -> Callable:  # type: ignore
-    expectation = ProfitExpectation(
-        initial=100,
-        earn=0.1,
-        within=5,
-        delta=0.05,
-    )
-
-    def __producer(price) -> Producer:  # type: ignore[no-untyped-def]
+    def __producer(
+        stock: int = 10,
+        price: float = 10.0,
+        fixed_cost: float = 500_000.0,
+        marginal_cost: float = 3.5,
+        profit_period: int = 10,
+    ) -> Producer:
         return Producer(
             capital=100,
-            stock=10,
+            stock=stock,
             price=price,
-            expectation=expectation,
+            fixed_cost=fixed_cost,
+            marginal_cost=marginal_cost,
+            profit_period=profit_period,
         )
 
     yield __producer
@@ -38,10 +39,10 @@ def test_consumer_buys_the_cheapest_product(  # type: ignore[no-untyped-def]
 ) -> None:
     capital = 100
     stock = 10
-    cheapest = producer(1.90)
-    not_bad = producer(1.95)
-    regular = producer(2.00)
-    expensive = producer(2.05)
+    cheapest = producer(price=1.90)
+    not_bad = producer(price=1.95)
+    regular = producer(price=2.00)
+    expensive = producer(price=2.05)
     not_cheap = [not_bad, expensive, regular]
     sellers = not_cheap + [cheapest]
     for seller in sellers:
@@ -57,5 +58,4 @@ def test_consumer_buys_the_cheapest_product(  # type: ignore[no-untyped-def]
     for seller in not_cheap:
         assert seller.capital == capital
         assert seller.stock == stock
-    assert cheapest.capital == capital + (cheapest.price * amount_to_buy)
     assert cheapest.stock == stock - amount_to_buy

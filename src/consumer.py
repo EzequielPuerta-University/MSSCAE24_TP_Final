@@ -15,7 +15,7 @@ class Consumer(Agent):
     def __repr__(self) -> str:
         return f"{type(self).__name__}(price={self.price})"
 
-    def buy(self, sellers: List[Producer], amount: int = 1) -> None:
+    def buy(self, amount: int, sellers: List[Producer]) -> None:
         cheapest = sellers[0]
         for seller in sellers[1:]:
             if seller.price < cheapest.price:

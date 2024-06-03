@@ -1,14 +1,14 @@
 import pytest
 from simulab.simulation.core.equilibrium_criterion import WithoutCriterion
 from simulab.simulation.core.experiment import ExperimentParametersSet
-from simulab.simulation.core.neighborhood import Moore
+from simulab.simulation.core.neighborhood import ExpandedMoore
 from simulab.simulation.core.runner import Runner
 
 from src.market import Market
 
 experiment_parameters_set = ExperimentParametersSet(
     length=[50],
-    neighborhood=[Moore],
+    neighborhood=[ExpandedMoore(3)],
     agent_types=[2],
     producer_probability=[0.65],
 )
