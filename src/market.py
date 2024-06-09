@@ -94,9 +94,11 @@ class Market(AbstractLatticeModel):
         agent = configuration.at(i, j)
         _type = agent.agent_type
         if _type == Consumer.TYPE:
+            sellers = self.__sellers_for(i, j, configuration)
+            if len(sellers) == 0: return
             agent.buy(
                 amount=np.random.normal(*self.quantity_to_buy),
-                sellers=self.__sellers_for(i, j, configuration),
+                sellers=sellers,
             )
         elif _type == Producer.TYPE:
             agent.balance_check()

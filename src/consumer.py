@@ -17,7 +17,7 @@ class Consumer(Agent):
 
     def buy(self, amount: int, sellers: List[Producer]) -> None:
         cheapest = sellers[0]
-        for seller in sellers[1:]:
+        for seller in sellers:
             if seller.price < cheapest.price:
                 cheapest = seller
         cheapest.sale(amount)
