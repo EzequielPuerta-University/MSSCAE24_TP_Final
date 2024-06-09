@@ -39,9 +39,11 @@ class ProfitFormula:
             current_profit = self._apply(sales=self.sales_within_period)
             previous_profit = self.last_profit
             self.last_profit = current_profit
-            increased = current_profit > previous_profit
+            increased = current_profit >= previous_profit
             if not increased:
                 self.__current_factor = self.__current_factor * (-1)
+            elif self.sales_within_period == 0:
+                self.__current_factor = -1
             delta = self.delta_price * self.__current_factor
             self.price = self.price * (1 + delta)
             self.profit_period = self.__initial_profit_period
