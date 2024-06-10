@@ -5,7 +5,7 @@ class ProfitFormula:
         fixed_cost: float,
         marginal_cost: float,
         profit_period: int,
-        delta_price: float = 0.01,
+        delta_price: float = 0.02,
     ) -> None:
         self.price = price
         self.fixed_cost = fixed_cost

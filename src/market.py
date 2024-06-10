@@ -18,8 +18,8 @@ class Market(AbstractLatticeModel):
         self,
         capital: float = 1_000_000,
         stock: int = 5_000_000_000,
-        price: Tuple[float, float] = (100, 10),
-        fixed_cost: Tuple[float, float] = (250_000, 10_000),
+        price: Tuple[float, float] = (1.1, 2),
+        fixed_cost: Tuple[float, float] = (250, 30),
         marginal_cost: Tuple[float, float] = (30.0, 5.0),
         quantity_to_buy: Tuple[int, int] = (4000, 1500),
         profit_period: int = 10,
@@ -57,12 +57,14 @@ class Market(AbstractLatticeModel):
         if basic_agent.agent_type == Consumer.TYPE:
             agent = Consumer()
         elif basic_agent.agent_type == Producer.TYPE:
+            marginal_cost = np.random.normal(*self.marginal_cost)
+            price_multiplier = np.random.uniform(*self.price)
             agent = Producer(
                 capital=self.capital,
                 stock=self.stock,
-                price=np.random.normal(*self.price),
+                price=marginal_cost*price_multiplier,
                 fixed_cost=np.random.normal(*self.fixed_cost),
-                marginal_cost=np.random.normal(*self.marginal_cost),
+                marginal_cost=marginal_cost,
                 profit_period=self.profit_period,
             )
         else:
