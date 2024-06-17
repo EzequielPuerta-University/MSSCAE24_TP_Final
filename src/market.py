@@ -22,8 +22,9 @@ class Market(AbstractLatticeModel):
         fixed_cost: Tuple[float, float] = (250, 30),
         marginal_cost: Tuple[float, float] = (30.0, 5.0),
         quantity_to_buy: Tuple[int, int] = (4000, 1500),
-        profit_period: int = 10,
+        profit_period: int = 5,
         producer_probability: float = 0.1,
+        max_price: float = 200,
         *args,
         **kwargs,
     ):
@@ -35,6 +36,7 @@ class Market(AbstractLatticeModel):
         self.quantity_to_buy = quantity_to_buy
         self.profit_period = profit_period
         self.producer_probability = producer_probability
+        self.max_price = max_price
 
         length = kwargs.get("length")
         configuration = kwargs.get(
@@ -66,6 +68,7 @@ class Market(AbstractLatticeModel):
                 fixed_cost=np.random.normal(*self.fixed_cost),
                 marginal_cost=marginal_cost,
                 profit_period=self.profit_period,
+                max_price=self.max_price,
             )
         else:
             raise ValueError(

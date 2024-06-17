@@ -14,6 +14,7 @@ class Producer(Agent):
         fixed_cost: float,
         marginal_cost: float,
         profit_period: int,
+        max_price: float,
     ) -> None:
         self.capital = capital
         self.stock = stock
@@ -22,6 +23,7 @@ class Producer(Agent):
             fixed_cost=fixed_cost,
             marginal_cost=marginal_cost,
             profit_period=profit_period,
+            max_price=max_price
         )
         self.__sales_of_the_day = 0
         super(Producer, self).__init__(self.TYPE)
