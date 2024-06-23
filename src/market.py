@@ -152,3 +152,13 @@ class Market(AbstractLatticeModel):
         )
         prices = list(filter(lambda price: price is not None, prices))
         return sum(prices) / len(prices)
+
+    @as_series
+    def profit_lattice(self) -> List[List[float]]:
+        return self._process_lattice_with(self.get_last_profit)
+
+    def get_last_profit(self, i, j) -> float:
+        try:
+            return self.get_agent(i, j).profit_formula.last_profit
+        except AttributeError:
+            return -1
