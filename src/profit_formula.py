@@ -1,5 +1,6 @@
 import random
 
+
 class ProfitFormula:
     def __init__(
         self,
@@ -8,7 +9,6 @@ class ProfitFormula:
         marginal_cost: float,
         profit_period: int,
         delta_price: float = 0.02,
-        max_price: float = 200,
     ) -> None:
         self.price = price
         self.fixed_cost = fixed_cost
@@ -19,7 +19,6 @@ class ProfitFormula:
         self.sales_within_period: int = 0
         self.__current_factor: int = random.randint(0, 1) * 2 - 1
         self.__initial_profit_period: int = profit_period
-        self.max_price = max_price
 
     def __repr__(self) -> str:
         txt = "{} (price={}, fixed_cost={}, marginal_cost={}, profit_period={})"
@@ -40,23 +39,21 @@ class ProfitFormula:
 
         period_finished = self.profit_period <= 0
         if period_finished:
-            self.price = self.compute_new_price()
+            self.price = self.__compute_new_price()
             self.profit_period = self.__initial_profit_period
             self.sales_within_period = 0
         return period_finished
 
-    def compute_new_price(self) -> float:
+    def __compute_new_price(self) -> float:
         current_profit = self._apply(sales=self.sales_within_period)
         previous_profit = self.last_profit
         self.last_profit = current_profit
         increased = current_profit >= previous_profit
-        if not increased:
-            self.__current_factor = self.__current_factor * (-1)
+
         if self.sales_within_period == 0:
             self.__current_factor = -1
+        elif not increased:
+            self.__current_factor = self.__current_factor * (-1)
+
         delta = self.delta_price * self.__current_factor
-        return self.clamp(max(self.marginal_cost, self.price * (1+delta)))
-
-    def clamp(self, price) -> float:
-        return max(0, min(price, self.max_price))
-
+        return max(self.marginal_cost, self.price * (1 + delta))

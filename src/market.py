@@ -18,25 +18,25 @@ class Market(AbstractLatticeModel):
         self,
         capital: float = 1_000_000,
         stock: int = 5_000_000_000,
-        price: Tuple[float, float] = (1.1, 2),
-        fixed_cost: Tuple[float, float] = (250, 30),
+        price_ratio: Tuple[float, float] = (1.1, 2),
+        fixed_cost: Tuple[float, float] = (250_000, 10_000),
         marginal_cost: Tuple[float, float] = (30.0, 5.0),
         quantity_to_buy: Tuple[int, int] = (4000, 1500),
         profit_period: int = 5,
         producer_probability: float = 0.1,
-        max_price: float = 200,
+        bankrupt_enabled: bool = False,
         *args,
         **kwargs,
     ):
         self.capital = capital
         self.stock = stock
-        self.price = price
+        self.price_ratio = price_ratio
         self.fixed_cost = fixed_cost
         self.marginal_cost = marginal_cost
         self.quantity_to_buy = quantity_to_buy
         self.profit_period = profit_period
         self.producer_probability = producer_probability
-        self.max_price = max_price
+        self.bankrupt_enabled = bankrupt_enabled
 
         length = kwargs.get("length")
         configuration = kwargs.get(
@@ -60,15 +60,14 @@ class Market(AbstractLatticeModel):
             agent = Consumer()
         elif basic_agent.agent_type == Producer.TYPE:
             marginal_cost = np.random.normal(*self.marginal_cost)
-            price_multiplier = np.random.uniform(*self.price)
+            price_ratio = np.random.uniform(*self.price_ratio)
             agent = Producer(
                 capital=self.capital,
                 stock=self.stock,
-                price=marginal_cost*price_multiplier,
+                price=marginal_cost * price_ratio,
                 fixed_cost=np.random.normal(*self.fixed_cost),
                 marginal_cost=marginal_cost,
                 profit_period=self.profit_period,
-                max_price=self.max_price,
             )
         else:
             raise ValueError(
@@ -87,7 +86,10 @@ class Market(AbstractLatticeModel):
         for position in neighbors:
             agent = configuration.at(*position)
             if agent.agent_type == Producer.TYPE:
-                sellers.append(agent)
+                if self.bankrupt_enabled and agent.bankrupted:
+                    pass
+                else:
+                    sellers.append(agent)
         return sellers
 
     def step(
@@ -99,14 +101,18 @@ class Market(AbstractLatticeModel):
         agent = configuration.at(i, j)
         _type = agent.agent_type
         if _type == Consumer.TYPE:
-            sellers = self.__sellers_for(i, j, configuration)
-            if len(sellers) == 0: return
-            agent.buy(
-                amount=np.random.normal(*self.quantity_to_buy),
-                sellers=sellers,
-            )
+            try:
+                agent.buy(
+                    amount=np.random.normal(*self.quantity_to_buy),
+                    sellers=self.__sellers_for(i, j, configuration),
+                )
+            except IndexError:
+                raise ValueError(f"Consumer ({i}, {j}) has no Producers in it's neighborhood.")
         elif _type == Producer.TYPE:
-            agent.balance_check()
+            if self.bankrupt_enabled and agent.bankrupted:
+                pass
+            else:
+                agent.balance_check()
         else:
             raise ValueError(f"Unexpected agent type {_type} at ({i}, {j})")
 
@@ -118,6 +124,24 @@ class Market(AbstractLatticeModel):
     @as_series
     def price_lattice(self) -> List[List[float]]:
         action = lambda i, j: int(self.get_agent(i, j).price)
+        return self._process_lattice_with(action)
+
+    @as_series
+    def agent_types_categorized_lattice(self) -> List[List[Tuple[float, int]]]:
+        action = lambda i, j: (
+            int(self.get_agent(i, j).agent_type),
+            self.get_agent(i, j).agent_type,
+        )
+        return self._process_lattice_with(action)
+
+    @as_series
+    def price_categorized_lattice(self) -> List[List[Tuple[float, int]]]:
+        action = lambda i, j: (int(self.get_agent(i, j).price), self.get_agent(i, j).agent_type)
+        return self._process_lattice_with(action)
+
+    @as_series
+    def profit_categorized_lattice(self) -> List[List[Tuple[float, int]]]:
+        action = lambda i, j: (self.__get_last_profit(i, j), self.get_agent(i, j).agent_type)
         return self._process_lattice_with(action)
 
     @as_series_with(depends=("price_lattice",))
@@ -153,12 +177,8 @@ class Market(AbstractLatticeModel):
         prices = list(filter(lambda price: price is not None, prices))
         return sum(prices) / len(prices)
 
-    @as_series
-    def profit_lattice(self) -> List[List[float]]:
-        return self._process_lattice_with(self.get_last_profit)
-
-    def get_last_profit(self, i, j) -> float:
+    def __get_last_profit(self, i: int, j: int) -> float:
         try:
-            return self.get_agent(i, j).profit_formula.last_profit
+            return self.get_agent(i, j).last_profit
         except AttributeError:
             return -1

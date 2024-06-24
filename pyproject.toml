@@ -11,7 +11,7 @@ packages = [{include = "msscae24_tp_final"}]
 python = "^3.10"
 ipykernel = "^6.29.4"
 nbformat = "^5.10.4"
-simulab = "0.0.9"
+simulab = "0.0.11"
 pandas = "^2.2.2"
 
 
