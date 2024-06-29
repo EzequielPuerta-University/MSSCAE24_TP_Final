@@ -46,6 +46,7 @@ class Market(AbstractLatticeModel):
                 cast(int, length),
             ),
         )
+        kwargs.pop("configuration")
 
         super(Market, self).__init__(
             *args,
