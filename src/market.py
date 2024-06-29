@@ -12,7 +12,6 @@ from simulab.simulation.core.lattice import Lattice
 from src.consumer import Consumer
 from src.producer import Producer
 
-nan = float('nan')
 
 class Market(AbstractLatticeModel):
     def __init__(  # type: ignore[no-untyped-def]
@@ -102,13 +101,12 @@ class Market(AbstractLatticeModel):
         agent = configuration.at(i, j)
         _type = agent.agent_type
         if _type == Consumer.TYPE:
-            try:
-                agent.buy(
-                    amount=np.random.normal(*self.quantity_to_buy),
-                    sellers=self.__sellers_for(i, j, configuration),
-                )
-            except IndexError:
-                raise ValueError(f"Consumer ({i}, {j}) has no Producers in it's neighborhood.")
+            sellers = self.__sellers_for(i, j, configuration)
+            if sellers:
+                agent.buy(amount=np.random.normal(*self.quantity_to_buy), sellers=sellers)
+            else:
+                # Consumer has no Producers in it's neighborhood.
+                pass
         elif _type == Producer.TYPE:
             if self.bankrupt_enabled and agent.bankrupted:
                 pass
@@ -167,7 +165,7 @@ class Market(AbstractLatticeModel):
             flatten=True,
         )
         prices = list(filter(lambda price: price is not None, prices))
-        return sum(prices) / len(prices)
+        return sum(prices) / len(prices) if prices else 0
 
     @as_series
     def average_producer_price(self) -> float:
@@ -176,23 +174,26 @@ class Market(AbstractLatticeModel):
             flatten=True,
         )
         prices = list(filter(lambda price: price is not None, prices))
-        return sum(prices) / len(prices)
+        return sum(prices) / len(prices) if prices else 0
 
     @as_series
     def capital_lattice(self) -> List[List[Tuple[float, int]]]:
         action = lambda i, j: (self.__get_capital(i, j), self.get_agent(i, j).agent_type)
         return self._process_lattice_with(action)
 
+    def __is_bankrupted(self, producer: Producer) -> bool:
+        return self.bankrupt_enabled and producer.bankrupted
+
     def __get_last_profit(self, i: int, j: int) -> float:
         agent = self.get_agent(i, j)
         if agent.agent_type == Producer.TYPE:
-            return agent.last_profit if agent.capital > 0 else nan
+            return np.nan if self.__is_bankrupted(agent) else agent.last_profit
         else:
-            return nan
+            return np.nan
 
     def __get_capital(self, i: int, j: int) -> float:
         agent = self.get_agent(i, j)
         if agent.agent_type == Producer.TYPE:
-            return agent.capital if agent.capital > 0 else nan
+            return np.nan if self.__is_bankrupted(agent) else agent.capital
         else:
-            return nan
+            return np.nan

@@ -1450,14 +1450,14 @@ files = [
 
 [[package]]
 name = "simulab"
-version = "0.0.11"
+version = "0.0.13"
 description = "Simple simulation framework, created during a course of the Discrete Events Simulation Laboratory, from the University of Buenos Aires (https://modsimu.exp.dc.uba.ar/sed/)"
 category = "main"
 optional = false
 python-versions = "<4.0,>=3.10"
 files = [
-    {file = "simulab-0.0.11-py3-none-any.whl", hash = "sha256:3cb6e5882cbd8d4a72db1a05c0bd9dbf6a8bf65ec1b2000cbabfca7d8ca92069"},
-    {file = "simulab-0.0.11.tar.gz", hash = "sha256:84b299119bfcdbf17d19760bb4a6fc56fe985f0686b0dca98ee9e14e87adb028"},
+    {file = "simulab-0.0.13-py3-none-any.whl", hash = "sha256:7d3afd8083753040efbabfa164c195f6f3e3efa966ddc094c08ad54707e55714"},
+    {file = "simulab-0.0.13.tar.gz", hash = "sha256:4f44460378c26780b36c7ee0abcb45df2ea695a3050069a52f9a701b581f345f"},
 ]
 
 [package.dependencies]
@@ -1623,4 +1623,4 @@ files = [
 [metadata]
 lock-version = "2.0"
 python-versions = "^3.10"
-content-hash = "253164592489875b9c095ccf756f1557775b8d2a1fce2d066841b5fa5bce9074"
+content-hash = "4eb069e6636c4d41cbfe1e1556eff3cb24af82d601de90bdf23c0b06980d182e"
