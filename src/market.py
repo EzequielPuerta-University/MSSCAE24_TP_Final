@@ -12,6 +12,7 @@ from simulab.simulation.core.lattice import Lattice
 from src.consumer import Consumer
 from src.producer import Producer
 
+nan = float('nan')
 
 class Market(AbstractLatticeModel):
     def __init__(  # type: ignore[no-untyped-def]
@@ -59,13 +60,13 @@ class Market(AbstractLatticeModel):
         if basic_agent.agent_type == Consumer.TYPE:
             agent = Consumer()
         elif basic_agent.agent_type == Producer.TYPE:
-            marginal_cost = np.random.normal(*self.marginal_cost)
+            marginal_cost = abs(np.random.normal(*self.marginal_cost))
             price_ratio = np.random.uniform(*self.price_ratio)
             agent = Producer(
                 capital=self.capital,
                 stock=self.stock,
                 price=marginal_cost * price_ratio,
-                fixed_cost=np.random.normal(*self.fixed_cost),
+                fixed_cost=abs(np.random.normal(*self.fixed_cost)),
                 marginal_cost=marginal_cost,
                 profit_period=self.profit_period,
             )
@@ -177,8 +178,21 @@ class Market(AbstractLatticeModel):
         prices = list(filter(lambda price: price is not None, prices))
         return sum(prices) / len(prices)
 
+    @as_series
+    def capital_lattice(self) -> List[List[Tuple[float, int]]]:
+        action = lambda i, j: (self.__get_capital(i, j), self.get_agent(i, j).agent_type)
+        return self._process_lattice_with(action)
+
     def __get_last_profit(self, i: int, j: int) -> float:
-        try:
-            return self.get_agent(i, j).last_profit
-        except AttributeError:
-            return -1
+        agent = self.get_agent(i, j)
+        if agent.agent_type == Producer.TYPE:
+            return agent.last_profit if agent.capital > 0 else nan
+        else:
+            return nan
+
+    def __get_capital(self, i: int, j: int) -> float:
+        agent = self.get_agent(i, j)
+        if agent.agent_type == Producer.TYPE:
+            return agent.capital if agent.capital > 0 else nan
+        else:
+            return nan
