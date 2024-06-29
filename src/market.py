@@ -46,13 +46,13 @@ class Market(AbstractLatticeModel):
                 cast(int, length),
             ),
         )
-        kwargs.pop("configuration")
+
+        kwargs["configuration"] = configuration
 
         super(Market, self).__init__(
             *args,
             update_simultaneously=True,
             update_sorted_by_agent_type=True,
-            configuration=configuration,
             **kwargs,
         )
 
