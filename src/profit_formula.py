@@ -11,10 +11,12 @@ class ProfitFormula:
         delta_price: float = 0.02,
     ) -> None:
         self.price = price
+        self.previous_price = price
         self.fixed_cost = fixed_cost
         self.marginal_cost = marginal_cost
         self.profit_period = profit_period
         self.delta_price = delta_price
+        self.previous_profit: float = 0
         self.last_profit: float = 0
         self.sales_within_period: int = 0
         self.__current_factor: int = random.randint(0, 1) * 2 - 1
@@ -39,6 +41,7 @@ class ProfitFormula:
 
         period_finished = self.profit_period <= 0
         if period_finished:
+            self.previous_price = self.price
             self.price = self.__compute_new_price()
             self.profit_period = self.__initial_profit_period
             self.sales_within_period = 0
@@ -46,9 +49,9 @@ class ProfitFormula:
 
     def __compute_new_price(self) -> float:
         current_profit = self._apply(sales=self.sales_within_period)
-        previous_profit = self.last_profit
+        self.previous_profit = self.last_profit
         self.last_profit = current_profit
-        increased = current_profit >= previous_profit
+        increased = current_profit >= self.previous_profit
 
         if self.sales_within_period == 0:
             self.__current_factor = -1

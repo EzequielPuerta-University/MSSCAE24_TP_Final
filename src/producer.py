@@ -40,8 +40,16 @@ class Producer(Agent):
         return self.profit_formula.price
 
     @property
+    def previous_price(self) -> float:
+        return self.profit_formula.previous_price
+
+    @property
     def last_profit(self) -> float:
         return self.profit_formula.last_profit
+
+    @property
+    def previous_profit(self) -> float:
+        return self.profit_formula.previous_profit
 
     def sale(self, amount: int) -> None:
         if self.stock >= amount:

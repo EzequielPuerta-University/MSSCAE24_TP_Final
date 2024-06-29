@@ -12,6 +12,13 @@ from simulab.simulation.core.lattice import Lattice
 from src.consumer import Consumer
 from src.producer import Producer
 
+def avg(iterable):
+    n = 0
+    sum = 0.0
+    for v in iterable:
+        sum += v
+        n += 1
+    return sum / n if n > 0 else 0
 
 class Market(AbstractLatticeModel):
     def __init__(  # type: ignore[no-untyped-def]
@@ -144,6 +151,13 @@ class Market(AbstractLatticeModel):
         action = lambda i, j: (self.__get_last_profit(i, j), self.get_agent(i, j).agent_type)
         return self._process_lattice_with(action)
 
+    @as_series
+    def average_profit(self) -> float:
+        action = lambda i, j: self.__get_last_profit(i, j)
+        profits = self._process_lattice_with(action, flatten=True)
+        profits = filter(lambda profit: not np.isnan(profit), profits)
+        return avg(profits)
+
     @as_series_with(depends=("price_lattice",))
     def average_price(self) -> float:
         prices = self._flatten("price_lattice")
@@ -165,8 +179,8 @@ class Market(AbstractLatticeModel):
             self.__collect(Consumer.TYPE),
             flatten=True,
         )
-        prices = list(filter(lambda price: price is not None, prices))
-        return sum(prices) / len(prices) if prices else 0
+        prices = filter(lambda price: price is not None, prices)
+        return avg(prices)
 
     @as_series
     def average_producer_price(self) -> float:
@@ -174,13 +188,36 @@ class Market(AbstractLatticeModel):
             self.__collect(Producer.TYPE),
             flatten=True,
         )
-        prices = list(filter(lambda price: price is not None, prices))
-        return sum(prices) / len(prices) if prices else 0
+        prices = filter(lambda price: price is not None, prices)
+        return avg(prices)
 
     @as_series
     def capital_lattice(self) -> List[List[Tuple[float, int]]]:
         action = lambda i, j: (self.__get_capital(i, j), self.get_agent(i, j).agent_type)
         return self._process_lattice_with(action)
+
+    @as_series
+    def percent_profit_change_lattice(self) -> List[List[Tuple[float, int]]]:
+        action = lambda i, j: (self.__get_percent_profit_change(i, j), self.get_agent(i, j).agent_type)
+        return self._process_lattice_with(action)
+
+    @as_series_with(depends=("percent_profit_change_lattice",))
+    def average_profit_change(self) -> float:
+        changes = self._flatten("percent_profit_change_lattice")
+        changes = filter(lambda change: not np.isnan(change), map(lambda change: change[0], changes))
+        return avg(changes)
+
+    @as_series
+    def percent_price_change_lattice(self) -> List[List[Tuple[float, int]]]:
+        action = lambda i, j: (self.__get_percent_price_change(i, j), self.get_agent(i, j).agent_type)
+        return self._process_lattice_with(action)
+
+    @as_series_with(depends=("percent_price_change_lattice",))
+    def average_price_change(self) -> float:
+        changes = self._flatten("percent_price_change_lattice")
+        changes = filter(lambda change: not np.isnan(change), map(lambda change: change[0], changes))
+        return avg(changes)
+
 
     def __is_bankrupted(self, producer: Producer) -> bool:
         return self.bankrupt_enabled and producer.bankrupted
@@ -189,6 +226,24 @@ class Market(AbstractLatticeModel):
         agent = self.get_agent(i, j)
         if agent.agent_type == Producer.TYPE:
             return np.nan if self.__is_bankrupted(agent) else agent.last_profit
+        else:
+            return np.nan
+
+    def __get_percent_profit_change(self, i: int, j: int) -> float:
+        agent = self.get_agent(i, j)
+        if agent.agent_type == Producer.TYPE:
+            if self.__is_bankrupted(agent): return np.nan
+            return (agent.last_profit - agent.previous_profit) / agent.previous_profit * 100\
+                if agent.previous_profit != 0 else 0
+        else:
+            return np.nan
+
+    def __get_percent_price_change(self, i: int, j: int) -> float:
+        agent = self.get_agent(i, j)
+        if agent.agent_type == Producer.TYPE:
+            if self.__is_bankrupted(agent): return np.nan
+            return (agent.price - agent.previous_price) / agent.previous_price * 100\
+                if agent.previous_price != 0 else 0
         else:
             return np.nan
 
