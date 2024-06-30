@@ -224,6 +224,17 @@ class Market(AbstractLatticeModel):
         changes = filter(lambda change: not np.isnan(change), map(lambda change: change[0], changes))
         return avg(changes)
 
+    @as_series
+    def alive_producers(self) -> float:
+        count = 0.0
+        def count_alive_producers(i, j):
+            nonlocal count
+            agent = self.get_agent(i, j)
+            if agent.agent_type == Producer.TYPE and not self.__is_bankrupted(agent):
+                count += 1
+        self._process_lattice_with(lambda i, j: count_alive_producers(i, j))
+        return count
+
 
     def __is_bankrupted(self, producer: Producer) -> bool:
         return self.bankrupt_enabled and producer.bankrupted
