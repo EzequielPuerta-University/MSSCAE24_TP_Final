@@ -130,8 +130,14 @@ class Market(AbstractLatticeModel):
 
     @as_series
     def price_lattice(self) -> List[List[float]]:
-        action = lambda i, j: int(self.get_agent(i, j).price)
+        action = lambda i, j: self.get_price(i, j)
         return self._process_lattice_with(action)
+
+    def get_price(self, i, j) -> float:
+        agent = self.get_agent(i, j)
+        if agent.agent_type == Producer.TYPE and self.__is_bankrupted(agent):
+            return np.nan
+        return agent.price
 
     @as_series
     def agent_types_categorized_lattice(self) -> List[List[Tuple[float, int]]]:
@@ -217,6 +223,17 @@ class Market(AbstractLatticeModel):
         changes = self._flatten("percent_price_change_lattice")
         changes = filter(lambda change: not np.isnan(change), map(lambda change: change[0], changes))
         return avg(changes)
+
+    @as_series
+    def alive_producers(self) -> float:
+        count = 0.0
+        def count_alive_producers(i, j):
+            nonlocal count
+            agent = self.get_agent(i, j)
+            if agent.agent_type == Producer.TYPE and not self.__is_bankrupted(agent):
+                count += 1
+        self._process_lattice_with(lambda i, j: count_alive_producers(i, j))
+        return count
 
 
     def __is_bankrupted(self, producer: Producer) -> bool:
