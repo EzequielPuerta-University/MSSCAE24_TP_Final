@@ -55,7 +55,7 @@ class ProfitFormula:
 
         if self.sales_within_period == 0:
             self.__current_factor = -1
-        elif not increased:
+        elif not increased or self.price == self.marginal_cost:
             self.__current_factor = self.__current_factor * (-1)
 
         delta = self.delta_price * self.__current_factor
