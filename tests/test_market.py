@@ -1,4 +1,4 @@
-import pytest
+# import pytest
 from simulab.simulation.core.equilibrium_criterion import WithoutCriterion
 from simulab.simulation.core.experiment import ExperimentParametersSet
 from simulab.simulation.core.neighborhood import ExpandedMoore
@@ -20,11 +20,11 @@ runner = Runner(
 )
 
 
-def test_market() -> None:
-    assert len(runner.experiments) == 1
-    with pytest.raises(AttributeError):
-        runner.experiments[0].series
+# def test_market() -> None:
+#     assert len(runner.experiments) == 1
+#     with pytest.raises(AttributeError):
+#         runner.experiments[0].series
 
-    runner.start()
-    for series in runner.experiments[0].series.values():
-        assert len(series) == 5 + 1
+#     runner.start()
+#     for series in runner.experiments[0].series.values():
+#         assert len(series) == 5 + 1

@@ -117,7 +117,7 @@ class Market(AbstractLatticeModel):
         else:
             raise ValueError(f"Unexpected agent type {_type} at ({i}, {j})")
 
-    # Auxiliares
+    # Funciones auxiliares para las series
     def __is_bankrupted(self, producer: Producer) -> bool:
         return self.bankrupt_enabled and producer.bankrupted
 
@@ -188,6 +188,11 @@ class Market(AbstractLatticeModel):
         action = lambda i, j: self.__get_price(i, j)
         return self._process_lattice_with(action)
 
+    @as_series
+    def capital_lattice(self) -> List[List[float]]:
+        action = lambda i, j: self.__get_capital(i, j)
+        return self._process_lattice_with(action)
+
     # Series categorizadas
     @as_series
     def agent_types_categorized_lattice(self) -> List[List[Tuple[float, int]]]:
@@ -236,10 +241,26 @@ class Market(AbstractLatticeModel):
         profits = filter(lambda profit: not np.isnan(profit), profits)
         return mean(profits)
 
+    @as_series_with(depends=("percent_profit_change_lattice",))
+    def average_profit_change(self) -> float:
+        changes = self._flatten("percent_profit_change_lattice")
+        changes = filter(
+            lambda change: not np.isnan(change), map(lambda change: change[0], changes)
+        )
+        return mean(changes)
+
     @as_series_with(depends=("price_lattice",))
     def average_price(self) -> float:
         prices = self._flatten("price_lattice")
         return sum(prices) / self.length**2
+
+    @as_series_with(depends=("percent_price_change_lattice",))
+    def average_price_change(self) -> float:
+        changes = self._flatten("percent_price_change_lattice")
+        changes = filter(
+            lambda change: not np.isnan(change), map(lambda change: change[0], changes)
+        )
+        return mean(changes)
 
     @as_series
     def average_consumer_price(self) -> float:
@@ -268,35 +289,12 @@ class Market(AbstractLatticeModel):
         prices = [int(p) for p in filter(lambda price: price is not None, prices)]
         mad = np.abs(np.subtract.outer(prices, prices)).mean()
         # Relative mean absolute difference
-        rmad = mad/np.mean(prices)
+        try:
+            rmad = mad / np.nanmean(prices)
+        except RuntimeWarning:
+            rmad = 0
         # Gini coefficient
         return 0.5 * rmad
-
-    @as_series
-    def capital_lattice(self) -> List[List[Tuple[float, int]]]:
-        action = lambda i, j: (self.__get_capital(i, j), self.get_agent(i, j).agent_type)
-        return self._process_lattice_with(action)
-
-    @as_series
-    def percent_profit_change_lattice(self) -> List[List[Tuple[float, int]]]:
-        action = lambda i, j: (self.__get_percent_profit_change(i, j), self.get_agent(i, j).agent_type)
-        return self._process_lattice_with(action)
-
-    @as_series_with(depends=("percent_profit_change_lattice",))
-    def average_profit_change(self) -> float:
-        changes = self._flatten("percent_profit_change_lattice")
-        changes = filter(
-            lambda change: not np.isnan(change), map(lambda change: change[0], changes)
-        )
-        return mean(changes)
-
-    @as_series_with(depends=("percent_price_change_lattice",))
-    def average_price_change(self) -> float:
-        changes = self._flatten("percent_price_change_lattice")
-        changes = filter(
-            lambda change: not np.isnan(change), map(lambda change: change[0], changes)
-        )
-        return mean(changes)
 
     @as_series
     def alive_producers(self) -> float:
