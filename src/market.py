@@ -259,6 +259,29 @@ class Market(AbstractLatticeModel):
         prices = filter(lambda price: price is not None, prices)
         return mean(prices)
 
+    @as_series
+    def gini_prices_distribution(self) -> float:
+        prices = self._process_lattice_with(
+            self.__collect(Consumer.TYPE),
+            flatten=True,
+        )
+        prices = [int(p) for p in filter(lambda price: price is not None, prices)]
+        mad = np.abs(np.subtract.outer(prices, prices)).mean()
+        # Relative mean absolute difference
+        rmad = mad/np.mean(prices)
+        # Gini coefficient
+        return 0.5 * rmad
+
+    @as_series
+    def capital_lattice(self) -> List[List[Tuple[float, int]]]:
+        action = lambda i, j: (self.__get_capital(i, j), self.get_agent(i, j).agent_type)
+        return self._process_lattice_with(action)
+
+    @as_series
+    def percent_profit_change_lattice(self) -> List[List[Tuple[float, int]]]:
+        action = lambda i, j: (self.__get_percent_profit_change(i, j), self.get_agent(i, j).agent_type)
+        return self._process_lattice_with(action)
+
     @as_series_with(depends=("percent_profit_change_lattice",))
     def average_profit_change(self) -> float:
         changes = self._flatten("percent_profit_change_lattice")
