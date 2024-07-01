@@ -288,11 +288,9 @@ class Market(AbstractLatticeModel):
         )
         prices = [int(p) for p in filter(lambda price: price is not None, prices)]
         mad = np.abs(np.subtract.outer(prices, prices)).mean()
+        mean = np.nanmean(prices)
         # Relative mean absolute difference
-        try:
-            rmad = mad / np.nanmean(prices)
-        except RuntimeWarning:
-            rmad = 0
+        rmad = mad / mean if mean else 0
         # Gini coefficient
         return 0.5 * rmad
 
