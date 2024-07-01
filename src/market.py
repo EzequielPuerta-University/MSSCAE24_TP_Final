@@ -1,3 +1,4 @@
+from statistics import mean
 from typing import Callable, List, Tuple, cast
 
 import numpy as np
@@ -12,13 +13,6 @@ from simulab.simulation.core.lattice import Lattice
 from src.consumer import Consumer
 from src.producer import Producer
 
-def avg(iterable):
-    n = 0
-    sum = 0.0
-    for v in iterable:
-        sum += v
-        n += 1
-    return sum / n if n > 0 else 0
 
 class Market(AbstractLatticeModel):
     def __init__(  # type: ignore[no-untyped-def]
@@ -46,7 +40,7 @@ class Market(AbstractLatticeModel):
         self.bankrupt_enabled = bankrupt_enabled
 
         length = kwargs.get("length")
-        configuration = kwargs.get(
+        configuration = kwargs.pop(
             "configuration",
             Lattice.with_probability(
                 self.producer_probability,
@@ -123,6 +117,67 @@ class Market(AbstractLatticeModel):
         else:
             raise ValueError(f"Unexpected agent type {_type} at ({i}, {j})")
 
+    # Auxiliares
+    def __is_bankrupted(self, producer: Producer) -> bool:
+        return self.bankrupt_enabled and producer.bankrupted
+
+    def __get_last_profit(self, i: int, j: int) -> float:
+        agent = self.get_agent(i, j)
+        if agent.agent_type == Producer.TYPE:
+            return np.nan if self.__is_bankrupted(agent) else agent.last_profit
+        else:
+            return np.nan
+
+    def __get_percent_profit_change(self, i: int, j: int) -> float:
+        agent = self.get_agent(i, j)
+        if agent.agent_type == Producer.TYPE:
+            if self.__is_bankrupted(agent):
+                return np.nan
+            return (
+                (agent.last_profit - agent.previous_profit) / agent.previous_profit * 100
+                if agent.previous_profit != 0
+                else 0
+            )
+        else:
+            return np.nan
+
+    def __get_percent_price_change(self, i: int, j: int) -> float:
+        agent = self.get_agent(i, j)
+        if agent.agent_type == Producer.TYPE:
+            if self.__is_bankrupted(agent):
+                return np.nan
+            return (
+                (agent.price - agent.previous_price) / agent.previous_price * 100
+                if agent.previous_price != 0
+                else 0
+            )
+        else:
+            return np.nan
+
+    def __get_capital(self, i: int, j: int) -> float:
+        agent = self.get_agent(i, j)
+        if agent.agent_type == Producer.TYPE:
+            return np.nan if self.__is_bankrupted(agent) else agent.capital
+        else:
+            return np.nan
+
+    def __get_price(self, i: int, j: int) -> float:
+        agent = self.get_agent(i, j)
+        if agent.agent_type == Producer.TYPE and self.__is_bankrupted(agent):
+            return np.nan
+        return agent.price
+
+    def __collect(self, agent_type: int) -> Callable:  # type: ignore[type-arg]
+        def _collector(i: int, j: int) -> float | None:
+            agent = self.get_agent(i, j)
+            if agent.agent_type == agent_type:
+                return agent.price
+            else:
+                return None
+
+        return _collector
+
+    # Series de grilla
     @as_series
     def agent_types_lattice(self) -> List[List[int]]:
         action = lambda i, j: int(self.get_agent(i, j).agent_type)
@@ -130,15 +185,10 @@ class Market(AbstractLatticeModel):
 
     @as_series
     def price_lattice(self) -> List[List[float]]:
-        action = lambda i, j: self.get_price(i, j)
+        action = lambda i, j: self.__get_price(i, j)
         return self._process_lattice_with(action)
 
-    def get_price(self, i, j) -> float:
-        agent = self.get_agent(i, j)
-        if agent.agent_type == Producer.TYPE and self.__is_bankrupted(agent):
-            return np.nan
-        return agent.price
-
+    # Series categorizadas
     @as_series
     def agent_types_categorized_lattice(self) -> List[List[Tuple[float, int]]]:
         action = lambda i, j: (
@@ -158,26 +208,38 @@ class Market(AbstractLatticeModel):
         return self._process_lattice_with(action)
 
     @as_series
+    def capital_categorized_lattice(self) -> List[List[Tuple[float, int]]]:
+        action = lambda i, j: (self.__get_capital(i, j), self.get_agent(i, j).agent_type)
+        return self._process_lattice_with(action)
+
+    @as_series
+    def percent_profit_change_lattice(self) -> List[List[Tuple[float, int]]]:
+        action = lambda i, j: (
+            self.__get_percent_profit_change(i, j),
+            self.get_agent(i, j).agent_type,
+        )
+        return self._process_lattice_with(action)
+
+    @as_series
+    def percent_price_change_lattice(self) -> List[List[Tuple[float, int]]]:
+        action = lambda i, j: (
+            self.__get_percent_price_change(i, j),
+            self.get_agent(i, j).agent_type,
+        )
+        return self._process_lattice_with(action)
+
+    # Series numericas
+    @as_series
     def average_profit(self) -> float:
         action = lambda i, j: self.__get_last_profit(i, j)
         profits = self._process_lattice_with(action, flatten=True)
         profits = filter(lambda profit: not np.isnan(profit), profits)
-        return avg(profits)
+        return mean(profits)
 
     @as_series_with(depends=("price_lattice",))
     def average_price(self) -> float:
         prices = self._flatten("price_lattice")
         return sum(prices) / self.length**2
-
-    def __collect(self, agent_type: int) -> Callable:  # type: ignore[type-arg]
-        def _collector(i: int, j: int) -> float | None:
-            agent = self.get_agent(i, j)
-            if agent.agent_type == agent_type:
-                return agent.price
-            else:
-                return None
-
-        return _collector
 
     @as_series
     def average_consumer_price(self) -> float:
@@ -186,7 +248,7 @@ class Market(AbstractLatticeModel):
             flatten=True,
         )
         prices = filter(lambda price: price is not None, prices)
-        return avg(prices)
+        return mean(prices)
 
     @as_series
     def average_producer_price(self) -> float:
@@ -195,78 +257,33 @@ class Market(AbstractLatticeModel):
             flatten=True,
         )
         prices = filter(lambda price: price is not None, prices)
-        return avg(prices)
-
-    @as_series
-    def capital_lattice(self) -> List[List[Tuple[float, int]]]:
-        action = lambda i, j: (self.__get_capital(i, j), self.get_agent(i, j).agent_type)
-        return self._process_lattice_with(action)
-
-    @as_series
-    def percent_profit_change_lattice(self) -> List[List[Tuple[float, int]]]:
-        action = lambda i, j: (self.__get_percent_profit_change(i, j), self.get_agent(i, j).agent_type)
-        return self._process_lattice_with(action)
+        return mean(prices)
 
     @as_series_with(depends=("percent_profit_change_lattice",))
     def average_profit_change(self) -> float:
         changes = self._flatten("percent_profit_change_lattice")
-        changes = filter(lambda change: not np.isnan(change), map(lambda change: change[0], changes))
-        return avg(changes)
-
-    @as_series
-    def percent_price_change_lattice(self) -> List[List[Tuple[float, int]]]:
-        action = lambda i, j: (self.__get_percent_price_change(i, j), self.get_agent(i, j).agent_type)
-        return self._process_lattice_with(action)
+        changes = filter(
+            lambda change: not np.isnan(change), map(lambda change: change[0], changes)
+        )
+        return mean(changes)
 
     @as_series_with(depends=("percent_price_change_lattice",))
     def average_price_change(self) -> float:
         changes = self._flatten("percent_price_change_lattice")
-        changes = filter(lambda change: not np.isnan(change), map(lambda change: change[0], changes))
-        return avg(changes)
+        changes = filter(
+            lambda change: not np.isnan(change), map(lambda change: change[0], changes)
+        )
+        return mean(changes)
 
     @as_series
     def alive_producers(self) -> float:
         count = 0.0
-        def count_alive_producers(i, j):
+
+        def count_alive_producers(i: int, j: int) -> None:
             nonlocal count
             agent = self.get_agent(i, j)
             if agent.agent_type == Producer.TYPE and not self.__is_bankrupted(agent):
                 count += 1
+
         self._process_lattice_with(lambda i, j: count_alive_producers(i, j))
         return count
-
-
-    def __is_bankrupted(self, producer: Producer) -> bool:
-        return self.bankrupt_enabled and producer.bankrupted
-
-    def __get_last_profit(self, i: int, j: int) -> float:
-        agent = self.get_agent(i, j)
-        if agent.agent_type == Producer.TYPE:
-            return np.nan if self.__is_bankrupted(agent) else agent.last_profit
-        else:
-            return np.nan
-
-    def __get_percent_profit_change(self, i: int, j: int) -> float:
-        agent = self.get_agent(i, j)
-        if agent.agent_type == Producer.TYPE:
-            if self.__is_bankrupted(agent): return np.nan
-            return (agent.last_profit - agent.previous_profit) / agent.previous_profit * 100\
-                if agent.previous_profit != 0 else 0
-        else:
-            return np.nan
-
-    def __get_percent_price_change(self, i: int, j: int) -> float:
-        agent = self.get_agent(i, j)
-        if agent.agent_type == Producer.TYPE:
-            if self.__is_bankrupted(agent): return np.nan
-            return (agent.price - agent.previous_price) / agent.previous_price * 100\
-                if agent.previous_price != 0 else 0
-        else:
-            return np.nan
-
-    def __get_capital(self, i: int, j: int) -> float:
-        agent = self.get_agent(i, j)
-        if agent.agent_type == Producer.TYPE:
-            return np.nan if self.__is_bankrupted(agent) else agent.capital
-        else:
-            return np.nan
