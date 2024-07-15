@@ -11,7 +11,9 @@ packages = [{include = "msscae24_tp_final"}]
 python = "^3.10"
 ipykernel = "^6.29.4"
 nbformat = "^5.10.4"
-simulab = "0.0.6"
+simulab = "0.0.18"
+pandas = "^2.2.2"
+nbconvert = "^7.16.4"
 
 
 [tool.poetry.group.dev.dependencies]

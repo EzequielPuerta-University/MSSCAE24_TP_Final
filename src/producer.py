@@ -14,7 +14,6 @@ class Producer(Agent):
         fixed_cost: float,
         marginal_cost: float,
         profit_period: int,
-        max_price: float,
     ) -> None:
         self.capital = capital
         self.stock = stock
@@ -23,9 +22,9 @@ class Producer(Agent):
             fixed_cost=fixed_cost,
             marginal_cost=marginal_cost,
             profit_period=profit_period,
-            max_price=max_price
         )
         self.__sales_of_the_day = 0
+        self.bankrupted = False
         super(Producer, self).__init__(self.TYPE)
 
     def __repr__(self) -> str:
@@ -40,6 +39,18 @@ class Producer(Agent):
     def price(self) -> float:
         return self.profit_formula.price
 
+    @property
+    def previous_price(self) -> float:
+        return self.profit_formula.previous_price
+
+    @property
+    def last_profit(self) -> float:
+        return self.profit_formula.last_profit
+
+    @property
+    def previous_profit(self) -> float:
+        return self.profit_formula.previous_profit
+
     def sale(self, amount: int) -> None:
         if self.stock >= amount:
             self.stock = self.stock - amount
@@ -51,4 +62,5 @@ class Producer(Agent):
         period_finished = self.profit_formula.check(self.__sales_of_the_day)
         if period_finished:
             self.capital = self.capital + self.profit_formula.last_profit
+            self.bankrupted = self.capital <= 0
         self.__sales_of_the_day = 0

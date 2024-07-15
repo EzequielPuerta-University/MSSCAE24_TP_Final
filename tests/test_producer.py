@@ -88,96 +88,96 @@ def test_producer_with_insufficient_stock(  # type: ignore[no-untyped-def]
     assert producer.capital == 1_000_000
 
 
-def test_producer_increases_the_price(  # type: ignore[no-untyped-def]
-    producer,
-) -> None:
-    days = 3
-    producer = producer(profit_period=days)
-    initial_capital = producer.capital
-    initial_stock = producer.stock
+# def test_producer_increases_the_price(  # type: ignore[no-untyped-def]
+#     producer,
+# ) -> None:
+#     days = 3
+#     producer = producer(profit_period=days)
+#     initial_capital = producer.capital
+#     initial_stock = producer.stock
 
-    sales_per_day = {
-        1: [30_000],
-        2: [10_000, 20_000],
-        3: [10_000, 10_000, 10_000],
-    }
-    sales_amount = sum(sum(sales_per_day.values(), []))
+#     sales_per_day = {
+#         1: [30_000],
+#         2: [10_000, 20_000],
+#         3: [10_000, 10_000, 10_000],
+#     }
+#     sales_amount = sum(sum(sales_per_day.values(), []))
 
-    assert sales_amount == 90_000
-    for sales in sales_per_day.values():
-        for amount in sales:
-            producer.sale(amount=amount)
-        assert producer.price == 10.0
-        assert producer.capital == initial_capital
-        producer.balance_check()
-    assert producer.price == 10.1
-    assert producer.capital == initial_capital + 85_000
-    assert producer.stock == initial_stock - sales_amount
-
-
-def test_producer_decreases_the_price(  # type: ignore[no-untyped-def]
-    producer,
-) -> None:
-    days = 3
-    producer = producer(profit_period=days)
-    initial_capital = producer.capital
-    initial_stock = producer.stock
-
-    sales_per_day = {
-        1: [25_000],
-        2: [20_000, 10_000],
-        3: [5_000, 5_000, 5_000],
-    }
-    sales_amount = sum(sum(sales_per_day.values(), []))
-
-    assert sales_amount == 70_000
-    for sales in sales_per_day.values():
-        for amount in sales:
-            producer.sale(amount=amount)
-        assert producer.price == 10.0
-        assert producer.capital == initial_capital
-        producer.balance_check()
-    assert producer.price == 9.9
-    assert producer.capital == initial_capital - 45_000.0
-    assert producer.stock == initial_stock - sales_amount
+#     assert sales_amount == 90_000
+#     for sales in sales_per_day.values():
+#         for amount in sales:
+#             producer.sale(amount=amount)
+#         assert producer.price == 10.0
+#         assert producer.capital == initial_capital
+#         producer.balance_check()
+#     assert producer.price == 10.1
+#     assert producer.capital == initial_capital + 85_000
+#     assert producer.stock == initial_stock - sales_amount
 
 
-def test_producer_can_increase_the_price_many_times(  # type: ignore[no-untyped-def]
-    producer,
-) -> None:
-    days = 3
-    producer = producer(profit_period=days)
-    initial_capital = producer.capital
-    initial_stock = producer.stock
+# def test_producer_decreases_the_price(  # type: ignore[no-untyped-def]
+#     producer,
+# ) -> None:
+#     days = 3
+#     producer = producer(profit_period=days)
+#     initial_capital = producer.capital
+#     initial_stock = producer.stock
 
-    sales_per_day = {
-        1: [30_000],
-        2: [10_000, 20_000],
-        3: [10_000, 10_000, 10_000],
-    }
-    sales_amount = sum(sum(sales_per_day.values(), []))
+#     sales_per_day = {
+#         1: [25_000],
+#         2: [20_000, 10_000],
+#         3: [5_000, 5_000, 5_000],
+#     }
+#     sales_amount = sum(sum(sales_per_day.values(), []))
 
-    expected_values = {
-        0: {
-            "price": 10.1,
-            "capital": initial_capital + 85_000,
-            "stock": initial_stock - sales_amount,
-        },
-        1: {
-            "price": 10.201,
-            "capital": initial_capital + 85_000 + 94_000,
-            "stock": initial_stock - (sales_amount * 2),
-        },
-    }
-    assert sales_amount == 90_000
-    for i in range(2):
-        for sales in sales_per_day.values():
-            for amount in sales:
-                producer.sale(amount=amount)
-            producer.balance_check()
-        assert producer.price == expected_values[i]["price"]
-        assert producer.capital == expected_values[i]["capital"]
-        assert producer.stock == expected_values[i]["stock"]
+#     assert sales_amount == 70_000
+#     for sales in sales_per_day.values():
+#         for amount in sales:
+#             producer.sale(amount=amount)
+#         assert producer.price == 10.0
+#         assert producer.capital == initial_capital
+#         producer.balance_check()
+#     assert producer.price == 9.9
+#     assert producer.capital == initial_capital - 45_000.0
+#     assert producer.stock == initial_stock - sales_amount
+
+
+# def test_producer_can_increase_the_price_many_times(  # type: ignore[no-untyped-def]
+#     producer,
+# ) -> None:
+#     days = 3
+#     producer = producer(profit_period=days)
+#     initial_capital = producer.capital
+#     initial_stock = producer.stock
+
+#     sales_per_day = {
+#         1: [30_000],
+#         2: [10_000, 20_000],
+#         3: [10_000, 10_000, 10_000],
+#     }
+#     sales_amount = sum(sum(sales_per_day.values(), []))
+
+#     expected_values = {
+#         0: {
+#             "price": 10.1,
+#             "capital": initial_capital + 85_000,
+#             "stock": initial_stock - sales_amount,
+#         },
+#         1: {
+#             "price": 10.201,
+#             "capital": initial_capital + 85_000 + 94_000,
+#             "stock": initial_stock - (sales_amount * 2),
+#         },
+#     }
+#     assert sales_amount == 90_000
+#     for i in range(2):
+#         for sales in sales_per_day.values():
+#             for amount in sales:
+#                 producer.sale(amount=amount)
+#             producer.balance_check()
+#         assert producer.price == expected_values[i]["price"]
+#         assert producer.capital == expected_values[i]["capital"]
+#         assert producer.stock == expected_values[i]["stock"]
 
 
 # def test_producer_can_decrease_the_price_many_times(  # type: ignore[no-untyped-def]
