@@ -26,4 +26,3 @@ Alternativamente, debido al elevado tiempo de ejecución (aprox hora y media), a
     precio en cada paso (cada Producer tiene una instancia de ProfitFormula)
   - `bankrupted_utils.py`: funciones que se usan en el notebook, para la parte de
   bancarrota
-
